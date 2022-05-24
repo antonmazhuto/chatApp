@@ -10,6 +10,7 @@ import { UserResponseInterface } from '@app/user/types/userResponse.interface';
 import { ConfigService } from '@nestjs/config';
 import { UpdateUserDto } from '@app/user/dto/updateUser.dto';
 import { FilesService } from '@app/files/files.service';
+import { ChangePasswordDto } from '@app/authentication/dto/changePassword.dto';
 
 @Injectable()
 export class UserService {
@@ -50,6 +51,9 @@ export class UserService {
       },
       { select: ['id', 'username', 'bio', 'password'] },
     );
+
+    console.log('LOGIN_USER', loginUserDto);
+    console.log('user', user);
 
     if (!user) {
       throw new HttpException(
@@ -202,6 +206,33 @@ export class UserService {
   async removeRefreshToken(userId: number) {
     return this.userRepository.update(userId, {
       currentHashedRefreshToken: null,
+    });
+  }
+
+  async changePassword(changePasswordDto: ChangePasswordDto, user: UserEntity) {
+    const currentUser = await this.userRepository.findOne(
+      {
+        email: user.email,
+      },
+      { select: ['id', 'username', 'bio', 'password'] },
+    );
+    console.log('passwords', changePasswordDto);
+    console.log('PASS', currentUser);
+
+    const isCurrentPasswordCorrect = await compare(
+      changePasswordDto.currentPassword,
+      currentUser.password,
+    );
+
+    if (!isCurrentPasswordCorrect) {
+      throw new HttpException(
+        'Current password is not valid',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    await this.userRepository.update(user.id, {
+      password: await hash(changePasswordDto.newPassword, 10),
     });
   }
 }

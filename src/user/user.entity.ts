@@ -40,12 +40,6 @@ export class UserEntity {
   })
   image?: PublicFile;
 
-  @Column({ nullable: true })
-  lat: string;
-
-  @Column({ nullable: true })
-  lon: string;
-
   @Column({ select: false })
   password: string;
 
@@ -54,6 +48,9 @@ export class UserEntity {
     this.password = await hash(this.password, 10);
   }
 
+  @Column({
+    nullable: true,
+  })
   @Exclude()
   public currentHashedRefreshToken?: string;
 }

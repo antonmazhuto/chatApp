@@ -4,26 +4,21 @@ import {
   Get,
   HttpCode,
   Post,
+  Put,
   Req,
-  Res,
   UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { AuthenticationService } from '@app/authentication/authentication.service';
 import { SignUpUserDto } from '@app/authentication/dto/signUp.dto';
 import { LocalAuthenticationGuard } from '@app/authentication/guards/localAuthentication.guard';
-import { UserResponseInterface } from '@app/user/types/userResponse.interface';
 import { JwtAuthenticationGuard } from '@app/authentication/guards/jwtAuthentication.guard';
 import { UserService } from '@app/user/user.service';
 import { RequestWithUser } from '@app/authentication/types/requestWithUser.interface';
 import { JwtRefreshGuard } from '@app/authentication/guards/jwtRefresh.guard';
-import { SignInUserDto } from '@app/authentication/dto/signIn.dto';
-import { AuthGuard } from '@app/user/guards/auth.guard';
-import { User } from '@app/user/decorators/user.decorator';
-import { UserEntity } from '@app/user/user.entity';
 import { ApiTags } from '@nestjs/swagger';
+import { ChangePasswordDto } from '@app/authentication/dto/changePassword.dto';
 
 @Controller('auth')
 export class AuthenticationController {
@@ -42,37 +37,32 @@ export class AuthenticationController {
   @ApiTags('auth')
   @HttpCode(200)
   @UsePipes(new ValidationPipe())
-  // @UseGuards(LocalAuthenticationGuard)
+  @UseGuards(LocalAuthenticationGuard)
   @Post('sign-in')
-  // @UsePipes(new ValidationPipe())
-  // async signIn(@Body('user') signInUserDto: SignInUserDto) {
-  async signIn(
-    @Body('user') signInUserDto: SignInUserDto,
-  ): Promise<UserResponseInterface> {
-    const user = await this.userService.login(signInUserDto);
-    return this.userService.buildUserResponse(user);
-    // const { user } = request;
-    // const accessTokenCookie =
-    //   this.authenticationService.getCookieWithJwtAccessToken(user.id);
-    // const refreshTokenCookie =
-    //   this.authenticationService.getCookieWithJwtRefreshToken(user.id);
-    //
-    // await this.userService.setCurrentRefreshToken(
-    //   refreshTokenCookie.token,
-    //   user.id,
-    // );
-    //
-    // request.res.setHeader('Set-Cookie', [
-    //   accessTokenCookie,
-    //   refreshTokenCookie.token,
-    // ]);
-    // return user;
+  async signIn(@Req() request: RequestWithUser) {
+    console.log('request±!!', request);
+    const { user } = request;
+    console.log('user±!!', user);
+    const accessTokenCookie =
+      this.authenticationService.getCookieWithJwtAccessToken(user.id);
+    const refreshTokenCookie =
+      this.authenticationService.getCookieWithJwtRefreshToken(user.id);
+
+    await this.userService.setCurrentRefreshToken(
+      refreshTokenCookie.cookie,
+      user.id,
+    );
+    user.password = undefined;
+    request.res.setHeader('Set-Cookie', [
+      accessTokenCookie,
+      refreshTokenCookie.cookie,
+    ]);
+    return user;
   }
 
   @ApiTags('auth')
   @UseGuards(JwtAuthenticationGuard)
   @Post('log-out')
-  @HttpCode(200)
   async logOut(@Req() request: RequestWithUser) {
     await this.userService.removeRefreshToken(request.user.id);
     request.res.setHeader(
@@ -84,7 +74,7 @@ export class AuthenticationController {
   @ApiTags('auth')
   @UseGuards(JwtAuthenticationGuard)
   @Get()
-  authenticate(@Req() request: UserResponseInterface) {
+  authenticate(@Req() request: RequestWithUser) {
     const user = request.user;
     user.password = undefined;
     return user;
@@ -99,5 +89,14 @@ export class AuthenticationController {
 
     request.res.setHeader('Set-Cookie', accessTokenCookie);
     return request.user;
+  }
+
+  @UseGuards(JwtAuthenticationGuard)
+  @Put('change-password')
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @Req() request: RequestWithUser,
+  ) {
+    return this.userService.changePassword(changePasswordDto, request.user);
   }
 }

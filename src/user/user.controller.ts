@@ -16,18 +16,18 @@ import { UserService } from '@app/user/user.service';
 import { UserEntity } from '@app/user/user.entity';
 import { CreateUserDto } from '@app/user/dto/createUser.dto';
 import { UserResponseInterface } from '@app/user/types/userResponse.interface';
-import { AuthGuard } from '@app/user/guards/auth.guard';
 import { User } from '@app/user/decorators/user.decorator';
 import { UpdateUserDto } from '@app/user/dto/updateUser.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RequestWithUser } from '@app/authentication/types/requestWithUser.interface';
 import { Express } from 'express';
+import { JwtAuthenticationGuard } from '@app/authentication/guards/jwtAuthentication.guard';
 
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) {}
   @Get('users')
-  @UseGuards(AuthGuard)
+  // @UseGuards(JwtAuthenticationGuard)
   async findAll(): Promise<{ users: UserEntity[] }> {
     const users = await this.userService.findAll();
     return { users };
@@ -44,13 +44,13 @@ export class UserController {
   }
 
   @Get('user')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthenticationGuard)
   async currentUser(@User() user: UserEntity): Promise<UserResponseInterface> {
     return this.userService.buildUserResponse(user);
   }
 
   @Put('user')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthenticationGuard)
   async updateCurrentUSer(
     @User('id') currentUserId: number,
     @Body('user') updateUserDto: UpdateUserDto,
@@ -64,7 +64,7 @@ export class UserController {
   }
 
   @Post('avatar')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthenticationGuard)
   @UseInterceptors(FileInterceptor('file'))
   async addAvatar(
     @Req() request: RequestWithUser,
@@ -78,7 +78,7 @@ export class UserController {
   }
 
   @Delete('avatar')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthenticationGuard)
   async deleteAvatar(@Req() request: RequestWithUser) {
     return this.userService.deleteAvatar(request.user.id);
   }

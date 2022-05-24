@@ -1,6 +1,6 @@
 import { UserService } from '@app/user/user.service';
 import { SignUpUserDto } from '@app/authentication/dto/signUp.dto';
-import { compare, hash } from 'bcrypt';
+import { compare } from 'bcrypt';
 
 import PostgresErrorCode from '../database/postgresErrorCode.enum';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
@@ -24,8 +24,10 @@ export class AuthenticationService {
     try {
       const createdUser = await this.userService.createUser(registrationData);
       createdUser.password = undefined;
+      console.log('user', createdUser);
       return createdUser;
     } catch (error) {
+      console.log('error', error);
       if (error?.code === PostgresErrorCode.UniqueViolation) {
         throw new HttpException(
           'User with that email already exists',
